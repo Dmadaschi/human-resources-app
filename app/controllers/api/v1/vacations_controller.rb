@@ -3,44 +3,31 @@ module Api
     class VacationsController < ApplicationController
       protect_from_forgery with: :null_session
 
-      def index
-        vacations = Vacation.all
-        render json: vacations, each_serializer: VacationSerializer, status: :ok
-      end
-
       def create
-        vacation = Vacation.new(vacation_params)
-        vacation.save!
-        render json: vacation, serializer: VacationSerializer, status: :created
+        vacations = VacationCreator.call(vacation[:vacation_params], vacation[:employee_id])
+        render json: vacations, each_serializer: VacationSerializer, status: :created
       rescue ActiveRecord::RecordInvalid
         render json: { errors: vacation.errors.messages },
                status: :unprocessable_entity
-      end
-
-      def update
-        vacation = Vacation.find(params[:id])
-        vacation.update!(vacation_params)
-        render json: vacation, serializer: VacationSerializer, status: :ok
-
-      rescue ActiveRecord::RecordInvalid
-        render json: { errors: vacation.errors.messages },
+      rescue ::Vacations::EmployeeVacationValidator::ToManyVacationDaysError
+        render json: { errors: 'to many vacation days' },
                status: :unprocessable_entity
-      end
-
-      def show
-        vacation = Vacation.find(params[:id])
-        render json: vacation, serializer: VacationSerializer, status: :ok
-      end
-
-      def destroy
-        Vacation.find(params[:id]).destroy!
-        head :no_content
+      rescue ::Vacations::EmployeeVacationValidator::ToEarlyVacationError
+        render json: { errors: 'to early vacation' },
+               status: :unprocessable_entity
+      rescue ::Vacations::EmployeeVacationValidator::ToManyVacationsError
+        render json: { errors: 'to many vacations' },
+               status: :unprocessable_entity
+      rescue ::Vacations::EmployeeVacationValidator::InvalidVacationLengthError
+        render json: { errors: 'invalid vacation length' },
+               status: :unprocessable_entity
       end
 
       private
 
-      def vacation_params
-        params.require(:vacation).permit(:start_date, :end_date, :employee_id)
+      def vacation
+        params.require(:vacations)
+              .permit(:employee_id, vacation_params: [:start_date, :end_date])
       end
     end
   end

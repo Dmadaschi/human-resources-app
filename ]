@@ -1,0 +1,40 @@
+module Vacations
+  class EmployeeVacationValidator
+    class ToManyVacationsError < StandardError; end
+    class ToEarlyVacation < StandardError; end
+
+    def initialize(employee, vacation_params)
+      @employee = employee
+      @vacation_params = vacation_params
+    end
+
+    def self.validate(*args) = new(*args).validate
+    def validate = validate_employee
+
+    private
+
+    attr_reader :employee, :vacation_params
+
+    def validate_employee
+      raise ToManyVacationsError if to_early_vacation?
+      raise ToManyVacationsError if to_many_vacations?
+    end
+
+    def to_early_vacation?
+      if ((new_vacations.sort(&:start_date).first.start_date - employee.hiring_date).to_d / 365) >= 1
+        true
+      end
+    end
+
+    def to_many_vacations?
+      return true if vacation_params.count > 3
+    end
+
+    def new_vacations
+      @new_vacations ||=
+        vacation_params.map { |vacation_param| Vacation.new(vacation_param) }
+    end
+
+    def employee_vacations = @employee_vacations ||= employee.vacations
+  end
+end
