@@ -1,3 +1,3 @@
 class VacationSerializer < ActiveModel::Serializer
-  attributes :id, :stard_date, :end_date
+  attributes :id, :start_date, :end_date
 end
